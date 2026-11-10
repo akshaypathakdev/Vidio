@@ -11,6 +11,12 @@ const videoViewSchema = new Schema(
     viewer: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      default: null,
+    },
+
+    // User ID for authenticated viewers, session ID for anonymous viewers.
+    viewerKey: {
+      type: String,
       required: true,
     },
 
@@ -27,7 +33,7 @@ const videoViewSchema = new Schema(
 videoViewSchema.index(
   {
     video: 1,
-    viewer: 1,
+    viewerKey: 1,
     sessionId: 1,
   },
   {

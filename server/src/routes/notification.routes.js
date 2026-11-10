@@ -9,7 +9,6 @@ import {
 } from "../controllers/notification.controller.js";
 
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 
 const router = Router();
 
@@ -17,14 +16,14 @@ const router = Router();
 router.use(verifyJWT);
 
 // Fetch notifications.
-router.get("/", isEmailVerified, getUserNotifications);
+router.get("/", getUserNotifications);
 
 // Fetch unread notifications and their count.
-router.get("/unread", isEmailVerified, getUnreadNotifications);
-router.get("/unread-count", isEmailVerified, getUnreadNotificationCount);
+router.get("/unread", getUnreadNotifications);
+router.get("/unread-count", getUnreadNotificationCount);
 
 // Mark notifications as read.
-router.patch("/read-all", isEmailVerified, markAllNotificationsAsRead);
-router.patch("/:notificationId/read", isEmailVerified, markNotificationAsRead);
+router.patch("/read-all", markAllNotificationsAsRead);
+router.patch("/:notificationId/read", markNotificationAsRead);
 
 export default router;

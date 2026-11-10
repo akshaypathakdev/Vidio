@@ -16,27 +16,24 @@ import { isEmailVerified } from "../middlewares/emailVerification.middleware.js"
 
 const router = Router();
 
-// All comment routes require authentication
-router.use(verifyJWT);
-
 // Video comments
 router
   .route("/:videoId")
   .get(getVideoComments)
-  .post(isEmailVerified, addComment);
+  .post(verifyJWT, isEmailVerified, addComment);
 
 // Individual comment
 router
   .route("/c/:commentId")
   .get(getCommentById)
-  .patch(isEmailVerified, updateComment)
-  .delete(isEmailVerified, deleteComment);
+  .patch(verifyJWT, isEmailVerified, updateComment)
+  .delete(verifyJWT, isEmailVerified, deleteComment);
 
 // Replies
 router
   .route("/c/:commentId/replies")
   .get(getReplies)
-  .post(isEmailVerified, addReply);
+  .post(verifyJWT, isEmailVerified, addReply);
 
 // Reply count
 router.route("/c/:commentId/replies/count").get(getRepliesCount);

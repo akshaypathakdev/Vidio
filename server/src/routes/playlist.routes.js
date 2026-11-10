@@ -24,7 +24,7 @@ const router = Router();
 router.post("/", verifyJWT, isEmailVerified, createPlaylist);
 
 // Fetch the authenticated user's playlists.
-router.get("/user/me", verifyJWT, isEmailVerified, getMyPlaylists);
+router.get("/user/me", verifyJWT, getMyPlaylists);
 
 // Fetch playlists by username.
 // Public access; the controller must enforce playlist visibility.
@@ -43,7 +43,7 @@ router.patch(
   addVideoToPlaylist
 );
 
-router.get("/search", verifyJWT, isEmailVerified, searchPlaylists);
+router.get("/search", searchPlaylists);
 
 // Remove a video from a playlist.
 router.patch(
@@ -66,7 +66,7 @@ router.patch(
 // Fetch, update, or delete a playlist by ID.
 router
   .route("/:playlistId")
-  .get(verifyJWT, getPlaylistById)
+  .get(getPlaylistById)
   .patch(verifyJWT, isEmailVerified, verifyPlaylistEditor, updatePlaylist)
   .delete(verifyJWT, isEmailVerified, verifyPlaylistEditor, deletePlaylist);
 

@@ -9,10 +9,12 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
 
-router.route("/").post(isEmailVerified, createTweet);
+router.route("/").post(verifyJWT, isEmailVerified, createTweet);
 router.route("/user/:userId").get(getUserTweets);
-router.route("/:tweetId").patch(isEmailVerified, updateTweet).delete(isEmailVerified, deleteTweet);
+router
+  .route("/:tweetId")
+  .patch(verifyJWT, isEmailVerified, updateTweet)
+  .delete(verifyJWT, isEmailVerified, deleteTweet);
 
 export default router;

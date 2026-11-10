@@ -752,14 +752,18 @@ const createStreamToken = asyncHandler(async (req, res) => {
     throw new APIError(404, "Video not found");
   }
 
-  if (!video.isPublished && !video.owner.equals(req.user._id)) {
-    throw new APIError(403, "You are not allowed to watch this video");
+  // Public videos can be watched anonymously.
+  // Unpublished videos are accessible only to their owners.
+  if (!video.isPublished) {
+    if (!req.user || !video.owner.equals(req.user._id)) {
+      throw new APIError(403, "You are not allowed to watch this video");
+    }
   }
 
   const processingId = video.videoFile.split("/")[1];
 
   const token = generateStreamToken({
-    userId: req.user._id.toString(),
+    userId: req.user?._id.toString() || null,
     videoId,
     processingId,
   });
@@ -879,12 +883,10 @@ const recordVideoView = asyncHandler(async (req, res) => {
     throw new APIError(400, "Session id is required!");
   }
 
-  if (!req.user?._id) {
-    throw new APIError(401, "Authentication required!");
-  }
-
   const videoObjectId = new mongoose.Types.ObjectId(videoId);
-  const viewerId = req.user._id;
+  const viewerId = req.user?._id || null;
+
+  const viewerKey = viewerId ? viewerId.toString() : `anonymous:${sessionId}`;
 
   const video = await Video.findById(videoObjectId);
 
@@ -894,7 +896,7 @@ const recordVideoView = asyncHandler(async (req, res) => {
 
   const existingView = await VideoView.findOne({
     video: videoObjectId,
-    viewer: viewerId,
+    viewerKey,
     sessionId,
   });
 
@@ -914,19 +916,14 @@ const recordVideoView = asyncHandler(async (req, res) => {
   await VideoView.create({
     video: videoObjectId,
     viewer: viewerId,
+    viewerKey,
     sessionId,
   });
 
   const updatedVideo = await Video.findByIdAndUpdate(
     videoObjectId,
-    {
-      $inc: {
-        views: 1,
-      },
-    },
-    {
-      returnDocument: "after",
-    }
+    { $inc: { views: 1 } },
+    { returnDocument: "after" }
   );
 
   return res.status(200).json(

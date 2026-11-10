@@ -22,23 +22,30 @@ import { isEmailVerified } from "../middlewares/emailVerification.middleware.js"
 const router = Router();
 
 // Protected routes
-router.use(verifyJWT, isEmailVerified);
+router.use(verifyJWT);
 
 // Get all collaborators
 router.route("/playlist/:playlistId/collaborators").get(getAllCollaborators);
 
-
 // Invitation actions
-router.route("/playlist/:playlistId/invite/:userId").post(sendInvitation);
-router.route("/invitation/:invitationId/accept").patch(acceptInvitation);
-router.route("/invitation/:invitationId/reject").delete(rejectInvitation);
-router.route("/invitation/:invitationId/cancel").delete(cancelInvitation);
+router
+  .route("/playlist/:playlistId/invite/:userId")
+  .post(isEmailVerified, sendInvitation);
+router
+  .route("/invitation/:invitationId/accept")
+  .patch(isEmailVerified, acceptInvitation);
+router
+  .route("/invitation/:invitationId/reject")
+  .delete(isEmailVerified, rejectInvitation);
+router
+  .route("/invitation/:invitationId/cancel")
+  .delete(isEmailVerified, cancelInvitation);
 router.route("/invitation/:invitationId").get(getInvitationById);
 
 // Collaborator actions
 router
   .route("/playlist/:playlistId/collaborator/:userId")
-  .delete(removeCollaborator);
+  .delete(isEmailVerified, removeCollaborator);
 
 // Received invitations
 router.route("/invitations").get(getAllInvitations);

@@ -40,6 +40,41 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
   }
 });
 
+const optionalVerifyJWT = asyncHandler(async (req, res, next) => {
+  try {
+    const token =
+      req.cookies?.accessToken ??
+      req.header("Authorization")?.replace("Bearer ", "");
+
+    // No token: continue as an anonymous user.
+    if (!token) {
+      return next();
+    }
+
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+    const user = await User.findById(decodedToken?._id).select([
+      "-password -refreshToken",
+    ]);
+
+    if (!user) {
+      throw new APIError(401, "Invalid or expired access token");
+    }
+
+    if (decodedToken.sessionVersion !== user.sessionVersion) {
+      throw new APIError(401, "Session expired. Please login again.");
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    throw new APIError(
+      401,
+      error?.message || "Invalid or expired access token!"
+    );
+  }
+});
+
 const verifyStreamToken = asyncHandler(async (req, res, next) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
@@ -53,7 +88,11 @@ const verifyStreamToken = asyncHandler(async (req, res, next) => {
       process.env.STREAM_TOKEN_SECRET
     );
 
-    if (decodedToken?.type !== "stream") {
+    if (
+      decodedToken?.type !== "stream" ||
+      !decodedToken?.videoId ||
+      !decodedToken?.processingId
+    ) {
       throw new APIError(401, "Invalid stream token!");
     }
 
@@ -65,4 +104,4 @@ const verifyStreamToken = asyncHandler(async (req, res, next) => {
   }
 });
 
-export { verifyJWT, verifyStreamToken };
+export { verifyJWT, verifyStreamToken, optionalVerifyJWT };

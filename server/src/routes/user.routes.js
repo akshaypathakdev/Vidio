@@ -71,7 +71,9 @@ router.route("/socket-token").get(verifyJWT, generateSocketToken);
 router.route("/verify-email/:token").get(verifyEmail);
 
 // Resend verification email
-router.route("/resend-verification-email").post(resendVerificationEmail);
+router
+  .route("/resend-verification-email")
+  .post(verifyJWT, resendVerificationEmail);
 
 /* Password Recovery                                                          */
 
@@ -87,7 +89,7 @@ router.route("/reset-password/:token").post(resetPassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 
 // Search User by username
-router.get("/search", verifyJWT, isEmailVerified, searchUsers);
+router.get("/search", searchUsers);
 
 // Change password
 router
@@ -108,7 +110,7 @@ router
   .patch(verifyJWT, isEmailVerified, updateUserDetails);
 
 // Update about/bio
-router.route("/update-about").patch(verifyJWT, updateAbout);
+router.route("/update-about").patch(verifyJWT, isEmailVerified, updateAbout);
 
 // Update avatar / cover image
 router.route("/update-files").patch(
@@ -128,7 +130,7 @@ router.route("/update-files").patch(
 );
 
 // Get user's channel/profile
-router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
+router.route("/c/:username").get(getUserChannelProfile);
 
 /* Watch History                                                               */
 
