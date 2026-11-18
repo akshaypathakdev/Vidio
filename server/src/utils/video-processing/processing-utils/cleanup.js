@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 
 import { PROCESSED_VIDEOS_DIRECTORY } from "./config.js";

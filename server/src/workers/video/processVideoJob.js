@@ -26,6 +26,7 @@ import { notifySubscribersOfNewVideo } from "./notifications.js";
 export const processVideoJob = async (job) => {
   const {
     videoId,
+    originalVideoPath,
     mongoVideoId,
     originalKey,
     thumbnailLocalPath,
@@ -35,11 +36,12 @@ export const processVideoJob = async (job) => {
     qualities,
   } = job.data;
 
+  let videoFileLocalPath = originalVideoPath;
+
   if (!videoId || !mongoVideoId || !originalKey) {
     throw new Error("Invalid video processing job data.");
   }
 
-  let videoFileLocalPath;
   let duration = requiredDuration;
 
   try {
@@ -54,7 +56,7 @@ export const processVideoJob = async (job) => {
     const needsThumbnail = !thumbnailURL;
     const needsProcessing = video.processingStatus !== "ready" || !videoFile;
 
-    console.log("JOB QUALITIES:", qualities);
+    //console.log("JOB QUALITIES:", qualities);
     // Validate and prepare quality checkpoints.
     let qualityStatuses = normalizeQualityStatuses(qualities);
 
@@ -65,8 +67,13 @@ export const processVideoJob = async (job) => {
 
     await persistQualityStatuses(job, qualityStatuses);
 
-    // Download the original only when additional processing is required.
-    if (needsThumbnail || needsProcessing) {
+    if(videoFileLocalPath){
+      console.log("Reusing the local video file");
+    }
+
+    // Download the original only when additional processing is required
+    // and it is not stored in the local storage of the server.
+    if (!videoFileLocalPath && (needsThumbnail || needsProcessing)) {
       videoFileLocalPath = await downloadOriginalFileFromB2(
         originalKey,
         videoId
