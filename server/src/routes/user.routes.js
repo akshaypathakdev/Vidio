@@ -30,7 +30,10 @@ import {
 } from "../middlewares/validation.middleware.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  verifyJWT,
+  optionalVerifyJWT,
+} from "../middlewares/auth.middleware.js";
 import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 
 const router = Router();
@@ -89,7 +92,7 @@ router.route("/reset-password/:token").post(resetPassword);
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 
 // Search User by username
-router.get("/search", searchUsers);
+router.get("/search", optionalVerifyJWT, searchUsers);
 
 // Change password
 router
@@ -130,7 +133,7 @@ router.route("/update-files").patch(
 );
 
 // Get user's channel/profile
-router.route("/c/:username").get(getUserChannelProfile);
+router.route("/c/:username").get(optionalVerifyJWT, getUserChannelProfile);
 
 /* Watch History                                                               */
 

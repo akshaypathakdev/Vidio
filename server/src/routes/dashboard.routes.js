@@ -1,16 +1,24 @@
 import { Router } from "express";
+
 import {
   getChannelStats,
+  getCurrentUserStats,
   getChannelVideos,
 } from "../controllers/dashboard.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
+
+import { optionalVerifyJWT, verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
+router.use(optionalVerifyJWT);
 
-router.route("/stats").get(isEmailVerified, getChannelStats);
-router.route("/videos").get(isEmailVerified, getChannelVideos);
+// Public: Statistics of any channel
+router.route("/stats/:userId").get(getChannelStats);
+
+// Current user's statistics
+router.route("/stats").get(verifyJWT, getCurrentUserStats);
+
+// Protected: Videos of the current user
+router.route("/videos").get(getChannelVideos);
 
 export default router;

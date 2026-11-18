@@ -16,16 +16,21 @@ import {
   getAllCollaborators,
 } from "../controllers/playlistCollaborator.controller.js";
 
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  verifyJWT,
+  optionalVerifyJWT,
+} from "../middlewares/auth.middleware.js";
 import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 
 const router = Router();
 
+// Get all collaborators
+router
+  .route("/playlist/:playlistId/collaborators")
+  .get(optionalVerifyJWT, getAllCollaborators);
+
 // Protected routes
 router.use(verifyJWT);
-
-// Get all collaborators
-router.route("/playlist/:playlistId/collaborators").get(getAllCollaborators);
 
 // Invitation actions
 router

@@ -14,7 +14,10 @@ import {
   searchPlaylists,
 } from "../controllers/playlist.controller.js";
 
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  verifyJWT,
+  optionalVerifyJWT,
+} from "../middlewares/auth.middleware.js";
 import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 import { verifyPlaylistEditor } from "../middlewares/authPlaylist.middleware.js";
 
@@ -28,11 +31,15 @@ router.get("/user/me", verifyJWT, getMyPlaylists);
 
 // Fetch playlists by username.
 // Public access; the controller must enforce playlist visibility.
-router.get("/user/username/:username", getUserPlaylistsByUsername);
+router.get(
+  "/user/username/:username",
+  optionalVerifyJWT,
+  getUserPlaylistsByUsername
+);
 
 // Fetch playlists belonging to a specific user.
 // Public access; the controller must enforce playlist visibility.
-router.get("/user/:userId", getUserPlaylists);
+router.get("/user/:userId", optionalVerifyJWT, getUserPlaylists);
 
 // Add a video to a playlist.
 router.patch(
@@ -43,7 +50,7 @@ router.patch(
   addVideoToPlaylist
 );
 
-router.get("/search", searchPlaylists);
+router.get("/search", optionalVerifyJWT, searchPlaylists);
 
 // Remove a video from a playlist.
 router.patch(
@@ -66,7 +73,7 @@ router.patch(
 // Fetch, update, or delete a playlist by ID.
 router
   .route("/:playlistId")
-  .get(getPlaylistById)
+  .get(optionalVerifyJWT, getPlaylistById)
   .patch(verifyJWT, isEmailVerified, verifyPlaylistEditor, updatePlaylist)
   .delete(verifyJWT, isEmailVerified, verifyPlaylistEditor, deletePlaylist);
 

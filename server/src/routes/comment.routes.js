@@ -11,7 +11,10 @@ import {
   updateComment,
 } from "../controllers/comment.controller.js";
 
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  verifyJWT,
+  optionalVerifyJWT,
+} from "../middlewares/auth.middleware.js";
 import { isEmailVerified } from "../middlewares/emailVerification.middleware.js";
 
 const router = Router();
@@ -19,23 +22,25 @@ const router = Router();
 // Video comments
 router
   .route("/:videoId")
-  .get(getVideoComments)
+  .get(optionalVerifyJWT, getVideoComments)
   .post(verifyJWT, isEmailVerified, addComment);
 
 // Individual comment
 router
   .route("/c/:commentId")
-  .get(getCommentById)
+  .get(optionalVerifyJWT, getCommentById)
   .patch(verifyJWT, isEmailVerified, updateComment)
   .delete(verifyJWT, isEmailVerified, deleteComment);
 
 // Replies
 router
   .route("/c/:commentId/replies")
-  .get(getReplies)
+  .get(optionalVerifyJWT, getReplies)
   .post(verifyJWT, isEmailVerified, addReply);
 
 // Reply count
-router.route("/c/:commentId/replies/count").get(getRepliesCount);
+router
+  .route("/c/:commentId/replies/count")
+  .get(optionalVerifyJWT, getRepliesCount);
 
 export default router;
