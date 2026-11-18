@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import api from "../services/api.js";
 
 const AuthContext = createContext(null);
@@ -6,6 +13,19 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await api.get("/users/current-user");
+
+      setUser(response.data.data);
+
+      return response.data.data;
+    } catch (error) {
+      setUser(null);
+      throw error;
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -41,6 +61,7 @@ export function AuthProvider({ children }) {
         user,
         setUser,
         loading,
+        refreshUser,
       }}
     >
       {children}

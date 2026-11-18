@@ -103,18 +103,22 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 
+          {/* Public application routes */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/channel/:username" element={<UserChannel />} />
+            <Route path="/video/watch/:videoId" element={<Watch />} />
+            <Route
+              path="/playlists/:playlistId"
+              element={<PlaylistDetails />}
+            />
+          </Route>
+
           {/* Protected application routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout />}>
-              {/* Home */}
-              <Route path="/" element={<Home />} />
-
-              {/* Search */}
-              <Route path="/search" element={<SearchResults />} />
-
-              {/* Channel */}
               <Route path="/channel" element={<Channel />} />
-              <Route path="/channel/:username" element={<UserChannel />} />
               <Route path="/channel/edit" element={<EditChannel />} />
 
               {/* Settings */}
@@ -134,37 +138,27 @@ function App() {
                 path="/subscriptions/manage"
                 element={<ManageSubscriptions />}
               />
-              <Route path="/subscribers" element={<Subscribers />} />
 
               {/* History */}
               <Route path="/history" element={<History />} />
 
               {/* Video */}
-              <Route path="/video/watch/:videoId" element={<Watch />} />
               <Route path="/video/edit/:videoId" element={<EditVideo />} />
               <Route path="/video/upload" element={<UploadVideo />} />
-
-              {/* Liked videos */}
               <Route path="/liked-videos" element={<LikedVideos />} />
-
-              {/* Watch Later */}
               <Route path="/watch-later" element={<WatchLater />} />
-
-              {/* Your videos */}
               <Route path="/your-videos" element={<YourVideos />} />
 
               {/* Playlists */}
               <Route path="/playlists" element={<Playlists />} />
-              <Route
-                path="/playlists/:playlistId"
-                element={<PlaylistDetails />}
-              />
               <Route
                 path="/playlist-invitations"
                 element={<PlaylistInvitations />}
               />
             </Route>
           </Route>
+
+          {/* Add a not-found route here when you have a 404 page */}
         </Routes>
       </Suspense>
     </div>

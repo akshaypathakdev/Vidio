@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "../../../../../context/AuthContext.jsx";
 
 import {
   getNotifications,
@@ -11,6 +12,9 @@ import {
 const PAGE_SIZE = 10;
 
 function useNotifications() {
+  const { user } = useAuth();
+  const isAuthenticated = Boolean(user);
+
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -22,8 +26,13 @@ function useNotifications() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  // Fetch the unread count independently of the selected filter.
+  // Prevent outdated requests from updating the current state.
+  const requestIdRef = useRef(0);
+  const loadingMoreRef = useRef(false);
+
   const refreshUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) return 0;
+
     try {
       const count = await getUnreadNotificationCount();
       setUnreadCount(count);
@@ -32,14 +41,18 @@ function useNotifications() {
       console.error("Failed to fetch unread notification count:", err);
       throw err;
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  // Fetch notifications for the selected filter and page.
   const fetchPage = useCallback(
     async (pageNumber = 1, { append = false } = {}) => {
+      if (!isAuthenticated) return;
+
+      const requestId = ++requestIdRef.current;
+
       try {
         if (append) {
           setLoadingMore(true);
+          loadingMoreRef.current = true;
         } else {
           setLoading(true);
         }
@@ -54,6 +67,9 @@ function useNotifications() {
           limit: PAGE_SIZE,
         });
 
+        // Ignore results from outdated requests.
+        if (requestId !== requestIdRef.current) return;
+
         const docs = result?.docs ?? [];
 
         setNotifications((current) => (append ? [...current, ...docs] : docs));
@@ -63,55 +79,77 @@ function useNotifications() {
 
         return result;
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
+
         console.error("Failed to fetch notifications:", err);
+
         setError(
           err.response?.data?.message ||
             "Couldn't load notifications. Please try again.",
         );
+
         throw err;
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+          loadingMoreRef.current = false;
+        }
       }
     },
-    [filter],
+    [filter, isAuthenticated],
   );
 
-  // Load notifications whenever the filter changes.
+  // Initialize notifications whenever authentication or filter changes.
   useEffect(() => {
+    const requestId = ++requestIdRef.current;
     let cancelled = false;
 
-    const load = async () => {
-      setLoading(true);
-      setNotifications([]);
-      setPage(1);
-      setHasMore(false);
+    setNotifications([]);
+    setPage(1);
+    setHasMore(false);
+    setError(null);
 
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      setLoading(false);
+      setLoadingMore(false);
+      loadingMoreRef.current = false;
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoading(true);
+
+    const load = async () => {
       try {
         const fetcher =
           filter === "unread" ? getUnreadNotifications : getNotifications;
 
-        const [result] = await Promise.all([
+        const [result, count] = await Promise.all([
           fetcher({ page: 1, limit: PAGE_SIZE }),
-          refreshUnreadCount(),
+          getUnreadNotificationCount(),
         ]);
 
-        if (cancelled) return;
+        if (cancelled || requestId !== requestIdRef.current) return;
 
         setNotifications(result?.docs ?? []);
+        setUnreadCount(count);
         setPage(1);
         setHasMore(Boolean(result?.hasNextPage));
-        setError(null);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || requestId !== requestIdRef.current) return;
 
         console.error("Failed to initialize notifications:", err);
+
         setError(
           err.response?.data?.message ||
             "Couldn't load notifications. Please try again.",
         );
       } finally {
-        if (!cancelled) {
+        if (!cancelled && requestId === requestIdRef.current) {
           setLoading(false);
         }
       }
@@ -121,18 +159,24 @@ function useNotifications() {
 
     return () => {
       cancelled = true;
-    };
-  }, [filter, refreshUnreadCount]);
 
-  // Load the next page when the user requests more.
+      if (requestId === requestIdRef.current) {
+        requestIdRef.current++;
+      }
+    };
+  }, [filter, isAuthenticated]);
+
   const loadMore = useCallback(async () => {
-    if (loading || loadingMore || !hasMore) return;
+    if (!isAuthenticated || loading || loadingMoreRef.current || !hasMore) {
+      return;
+    }
 
     await fetchPage(page + 1, { append: true });
-  }, [fetchPage, hasMore, loading, loadingMore, page]);
+  }, [fetchPage, hasMore, isAuthenticated, loading, page]);
 
-  // Reload the first page and refresh the unread count.
   const refreshNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+
     const results = await Promise.allSettled([
       fetchPage(1),
       refreshUnreadCount(),
@@ -145,11 +189,12 @@ function useNotifications() {
     if (failedRequest) {
       throw failedRequest.reason;
     }
-  }, [fetchPage, refreshUnreadCount]);
+  }, [fetchPage, isAuthenticated, refreshUnreadCount]);
 
-  // Optimistically mark one notification as read.
   const markAsRead = useCallback(
     async (notificationId) => {
+      if (!isAuthenticated) return;
+
       const target = notifications.find(
         (notification) => notification._id === notificationId,
       );
@@ -169,7 +214,6 @@ function useNotifications() {
       try {
         await markNotificationAsReadApi(notificationId);
 
-        // Remove it from the current list if viewing unread only.
         if (filter === "unread") {
           setNotifications((current) =>
             current.filter(
@@ -178,7 +222,6 @@ function useNotifications() {
           );
         }
       } catch (err) {
-        // Restore the original state if the request fails.
         setNotifications((current) =>
           current.map((notification) =>
             notification._id === notificationId
@@ -187,7 +230,13 @@ function useNotifications() {
           ),
         );
 
-        setUnreadCount((count) => count + 1);
+        // Reconcile with the server instead of blindly incrementing.
+        try {
+          await refreshUnreadCount();
+        } catch {
+          // Keep the existing count if reconciliation also fails.
+        }
+
         setError(
           err.response?.data?.message ||
             "Couldn't mark the notification as read.",
@@ -196,13 +245,13 @@ function useNotifications() {
         throw err;
       }
     },
-    [filter, notifications],
+    [filter, isAuthenticated, notifications, refreshUnreadCount],
   );
 
-  // Optimistically mark every notification as read.
   const markAllAsRead = useCallback(async () => {
+    if (!isAuthenticated) return;
+
     const previousNotifications = notifications;
-    const previousUnreadCount = unreadCount;
 
     setNotifications((current) =>
       current.map((notification) => ({
@@ -223,7 +272,12 @@ function useNotifications() {
       }
     } catch (err) {
       setNotifications(previousNotifications);
-      setUnreadCount(previousUnreadCount);
+
+      try {
+        await refreshUnreadCount();
+      } catch {
+        // Keep the current count if reconciliation fails.
+      }
 
       setError(
         err.response?.data?.message ||
@@ -232,7 +286,7 @@ function useNotifications() {
 
       throw err;
     }
-  }, [filter, notifications, unreadCount]);
+  }, [filter, isAuthenticated, notifications, refreshUnreadCount]);
 
   return {
     notifications,

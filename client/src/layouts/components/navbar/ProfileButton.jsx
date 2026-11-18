@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, LogIn, UserPlus } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logoutUser } from "../../../features/settings/settings.service.js";
 import LogoutConfirm from "../../../features/auth/components/LogoutConfirm.jsx";
@@ -28,7 +28,6 @@ function ProfileButton({ user }) {
   const handleLogout = async () => {
     try {
       await logoutUser();
-
       setLogoutOpen(false);
       navigate("/login");
     } catch (error) {
@@ -41,23 +40,12 @@ function ProfileButton({ user }) {
 
   return (
     <div ref={profileRef} className="relative">
-      {/* Profile Button */}
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className={`
-          flex
-          h-9
-          w-9
-          shrink-0
-          items-center
-          justify-center
-          overflow-hidden
-          rounded-full
-          bg-gray-900
-          transition
-          ${open ? "ring-2 ring-white/20" : ""}
-        `}
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-900 transition"
         title="Profile"
+        aria-label="Open profile menu"
+        aria-expanded={open}
       >
         {user?.avatar ? (
           <img
@@ -67,155 +55,99 @@ function ProfileButton({ user }) {
           />
         ) : (
           <span className="text-sm font-semibold text-white">
-            {user?.username?.charAt(0).toUpperCase() || "?"}
+            {user?.username?.charAt(0).toUpperCase() || <User size={18} />}
           </span>
         )}
       </button>
 
-      {/* Profile Menu */}
       {open && (
-        <div
-          className="
-            absolute
-            right-0
-            top-12
-            z-50
-            w-64
-            overflow-hidden
-            rounded-xl
-            border
-            border-white/10
-            bg-[#08090b]
-            shadow-2xl
-          "
-        >
-          {/* User Info */}
-          <div
-            className="
-              border-b
-              border-white/10
-              px-4
-              py-4
-            "
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="
-                  flex
-                  h-10
-                  w-10
-                  shrink-0
-                  items-center
-                  justify-center
-                  overflow-hidden
-                  rounded-full
-                  bg-gray-900
-                "
+        <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-white/10 bg-[#08090b] shadow-2xl">
+          {user ? (
+            <>
+              <div className="border-b border-white/10 px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-900">
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.username}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-semibold text-white">
+                        {user.username?.charAt(0).toUpperCase() || "?"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {user.fullName || user.username}
+                    </p>
+                    <p className="truncate text-xs text-gray-500">
+                      @{user.username}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-1.5">
+                <NavLink
+                  to="/channel"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                >
+                  <User size={18} />
+                  <span>Your Channel</span>
+                </NavLink>
+
+                <NavLink
+                  to="/settings"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                >
+                  <Settings size={18} />
+                  <span>Settings</span>
+                </NavLink>
+              </div>
+
+              <div className="border-t border-white/10 p-1.5">
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    setLogoutOpen(true);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="p-1.5">
+              <NavLink
+                to="/login"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
               >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.username}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm font-semibold text-white">
-                    {user?.username?.charAt(0).toUpperCase() || "?"}
-                  </span>
-                )}
-              </div>
+                <LogIn size={18} />
+                <span>Login</span>
+              </NavLink>
 
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
-                  {user?.fullName || user?.username || "User"}
-                </p>
-
-                <p className="truncate text-xs text-gray-500">
-                  @{user?.username || "username"}
-                </p>
-              </div>
+              <NavLink
+                to="/register"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
+              >
+                <UserPlus size={18} />
+                <span>Register</span>
+              </NavLink>
             </div>
-          </div>
-
-          {/* Options */}
-          <div className="p-1.5">
-            {/* Your Channel */}
-            <NavLink
-              to="/channel"
-              onClick={() => setOpen(false)}
-              className="
-                flex
-                w-full
-                items-center
-                gap-3
-                rounded-lg
-                px-3
-                py-2.5
-                text-sm
-                text-gray-300
-                transition
-                hover:bg-white/5
-                hover:text-white
-              "
-            >
-              <User size={18} />
-              <span>Your Channel</span>
-            </NavLink>
-
-            {/* Settings */}
-            <NavLink
-              to="/settings"
-              onClick={() => setOpen(false)}
-              className="
-                flex
-                w-full
-                items-center
-                gap-3
-                rounded-lg
-                px-3
-                py-2.5
-                text-sm
-                text-gray-300
-                transition
-                hover:bg-white/5
-                hover:text-white
-              "
-            >
-              <Settings size={18} />
-              <span>Settings</span>
-            </NavLink>
-          </div>
-
-          {/* Logout */}
-          <div className="border-t border-white/10 p-1.5">
-            <div
-              onClick={() => {
-                setOpen(false);
-                setLogoutOpen(true);
-              }}
-              className="
-                flex
-                w-full
-                items-center
-                gap-3
-                rounded-lg
-                px-3
-                py-2.5
-                text-sm
-                text-gray-300
-                transition
-                hover:bg-white/5
-                hover:text-white
-              "
-            >
-              <LogOut size={18} />
-              <span>Logout</span>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Logout Confirmation */}
       {logoutOpen && (
         <LogoutConfirm
           onCancel={() => setLogoutOpen(false)}

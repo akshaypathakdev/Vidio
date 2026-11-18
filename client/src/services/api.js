@@ -15,7 +15,6 @@ const refreshApi = axios.create({
 let isRefreshing = false;
 let refreshPromise = null;
 
-// Requests that should NEVER trigger an access-token refresh.
 const noRefreshUrls = [
   "/users/login",
   "/users/register",
@@ -26,7 +25,11 @@ const noRefreshUrls = [
 ];
 
 function shouldSkipRefresh(url = "") {
-  return noRefreshUrls.some((endpoint) => url.includes(endpoint));
+  const pathname = url.split("?")[0].replace(/\/$/, "");
+
+  return noRefreshUrls.some((endpoint) => {
+    return pathname === endpoint;
+  });
 }
 
 api.interceptors.response.use(
@@ -35,40 +38,32 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // No response or not a 401.
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // Don't refresh requests that are explicitly excluded.
-    if (shouldSkipRefresh(originalRequest?.url)) {
+    if (!originalRequest || shouldSkipRefresh(originalRequest.url)) {
       return Promise.reject(error);
     }
 
-    // Don't retry the same request more than once.
-    if (originalRequest?._retry) {
+    if (originalRequest._retry) {
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
 
     try {
-      // If another request is already refreshing the token,
-      // wait for that same refresh request.
       if (!isRefreshing) {
         isRefreshing = true;
 
-        refreshPromise = refreshApi
-          .post("/users/refresh-token")
-          .finally(() => {
-            isRefreshing = false;
-            refreshPromise = null;
-          });
+        refreshPromise = refreshApi.post("/users/refresh-token").finally(() => {
+          isRefreshing = false;
+          refreshPromise = null;
+        });
       }
 
       await refreshPromise;
 
-      // Access token cookie has now been refreshed.
       return api(originalRequest);
     } catch (refreshError) {
       return Promise.reject(refreshError);

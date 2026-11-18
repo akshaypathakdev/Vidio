@@ -3,7 +3,7 @@ import api from "../../../../services/api.js";
 const NOTIFICATION_URL = "/notifications";
 
 const getNotifications = async ({ page = 1, limit = 10 } = {}) => {
-  const response = await api.get(`${NOTIFICATION_URL}/`, {
+  const response = await api.get(NOTIFICATION_URL, {
     params: { page, limit },
   });
 
