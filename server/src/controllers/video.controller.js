@@ -130,6 +130,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       "process-video",
       {
         videoId,
+        originalVideoPath: videoFileLocalPath,
         mongoVideoId: video._id.toString(),
         originalKey,
         thumbnailLocalPath,
@@ -161,7 +162,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
       });
     }
 
-    // Remove the original from B2 if it was uploaded.
+    //Remove the original from B2 if it was uploaded.
     if (originalKey) {
       await deleteOriginalVideoFromB2(originalKey).catch((cleanupError) => {
         console.error(
@@ -172,7 +173,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
 
     // Clean up all local uploads.
-    await cleanupUploadedFiles(videoFileLocalPath, thumbnailLocalPath);
+    //await cleanupUploadedFiles(videoFileLocalPath, thumbnailLocalPath);
 
     // Preserve validation and authorization errors.
     if (error instanceof APIError) {
@@ -187,7 +188,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
   // 8. The original is safely stored in B2 and the job is queued.
   // The worker only needs the local thumbnail at this point.
-  await cleanupUploadedFiles(videoFileLocalPath);
+  //await cleanupUploadedFiles(videoFileLocalPath);
 
   return res
     .status(201)
@@ -197,10 +198,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
 });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new APIError(401, "Unauthorized request!");
-  }
-
   let {
     page = 1,
     limit = 10,
@@ -212,22 +209,19 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
   const pipeline = [];
 
-  if (!userId) {
-    userId = req.user._id;
-  }
   // Search by title or description
-  if (query) {
+  if (query?.trim()) {
     pipeline.push({
       $match: {
         $or: [
-          { title: { $regex: query, $options: "i" } },
-          { description: { $regex: query, $options: "i" } },
+          { title: { $regex: query.trim(), $options: "i" } },
+          { description: { $regex: query.trim(), $options: "i" } },
         ],
       },
     });
   }
 
-  // Only published videos
+  // Only publicly available videos
   pipeline.push({
     $match: {
       isPublished: true,
@@ -235,7 +229,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     },
   });
 
-  // Filter by owner (optional)
+  // Optional owner filter
   if (userId) {
     if (!mongoose.isValidObjectId(userId)) {
       throw new APIError(400, "Invalid user ID");
@@ -273,7 +267,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
     },
   });
 
-  // Convert ownerDetails array into an object
   pipeline.push({
     $unwind: "$ownerDetails",
   });
@@ -286,6 +279,75 @@ const getAllVideos = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new APIResponse(200, result, "Videos fetched successfully!"));
+});
+
+const getMyVideos = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "desc",
+  } = req.query;
+
+  const pipeline = [];
+
+  // Only videos belonging to the authenticated user
+  pipeline.push({
+    $match: {
+      owner: new mongoose.Types.ObjectId(req.user._id),
+      isPublished: true,
+      processingStatus: "ready",
+    },
+  });
+
+  // Search by title or description
+  if (query?.trim()) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { title: { $regex: query.trim(), $options: "i" } },
+          { description: { $regex: query.trim(), $options: "i" } },
+        ],
+      },
+    });
+  }
+
+  pipeline.push({
+    $sort: {
+      [sortBy]: sortType === "asc" ? 1 : -1,
+    },
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "users",
+      localField: "owner",
+      foreignField: "_id",
+      as: "ownerDetails",
+      pipeline: [
+        {
+          $project: {
+            username: 1,
+            avatar: 1,
+          },
+        },
+      ],
+    },
+  });
+
+  pipeline.push({
+    $unwind: "$ownerDetails",
+  });
+
+  const result = await Video.aggregatePaginate(Video.aggregate(pipeline), {
+    page: Number(page),
+    limit: Number(limit),
+  });
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, result, "Your videos fetched successfully!"));
 });
 
 const getVideosByUsername = asyncHandler(async (req, res) => {
@@ -358,11 +420,15 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new APIError(400, "Invalid video id!");
   }
 
+  const userId = req.user?._id
+    ? new mongoose.Types.ObjectId(req.user._id)
+    : null;
+
   const videoObjectId = new mongoose.Types.ObjectId(videoId);
 
   const video = await Video.findById(videoObjectId);
 
-  if (!video) {
+  if (!video || !video.isPublished || video.processingStatus !== "ready") {
     throw new APIError(404, "Video not found!");
   }
 
@@ -448,20 +514,15 @@ const getVideoById = asyncHandler(async (req, res) => {
           $size: "$likes",
         },
 
-        isLiked: {
-          $in: [new mongoose.Types.ObjectId(req.user._id), "$likes.likedBy"],
-        },
+        isLiked: userId ? { $in: [userId, "$likes.likedBy"] } : false,
 
         subscriberCount: {
           $size: "$subscribers",
         },
 
-        isSubscribed: {
-          $in: [
-            new mongoose.Types.ObjectId(req.user._id),
-            "$subscribers.subscriber",
-          ],
-        },
+        isSubscribed: userId
+          ? { $in: [userId, "$subscribers.subscriber"] }
+          : false,
       },
     },
 
@@ -843,24 +904,27 @@ const searchVideos = asyncHandler(async (req, res) => {
     limit: Number(limit),
   });
 
-  await SearchHistory.findOneAndUpdate(
-    {
-      user: req.user._id,
-      query: q.toLowerCase(),
-    },
-    {
-      $set: {
-        searchedAt: new Date(),
-      },
-      $setOnInsert: {
+  // Record search history only for authenticated users
+  if (req.user?._id) {
+    await SearchHistory.findOneAndUpdate(
+      {
         user: req.user._id,
         query: q.toLowerCase(),
       },
-    },
-    {
-      upsert: true,
-    }
-  );
+      {
+        $set: {
+          searchedAt: new Date(),
+        },
+        $setOnInsert: {
+          user: req.user._id,
+          query: q.toLowerCase(),
+        },
+      },
+      {
+        upsert: true,
+      }
+    );
+  }
 
   return res
     .status(200)
@@ -942,6 +1006,7 @@ export {
   getAllVideos,
   publishAVideo,
   getVideoById,
+  getMyVideos,
   recordVideoView,
   updateVideo,
   deleteVideo,

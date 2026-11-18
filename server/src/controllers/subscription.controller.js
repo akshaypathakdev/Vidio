@@ -13,57 +13,76 @@ const toggleSubscription = asyncHandler(async (req, res) => {
   }
 
   const { channelId } = req.params;
+  const subscriberId = req.user._id;
 
+  // Validate channel ID
   if (!channelId) {
-    throw new APIError(400, "Channel id is required!");
+    throw new APIError(400, "Channel ID is required!");
   }
 
   if (!mongoose.isValidObjectId(channelId)) {
-    throw new APIError(400, "Invalid channel id!");
+    throw new APIError(400, "Invalid channel ID!");
   }
 
+  // Find channel
   const channel = await User.findById(channelId);
 
   if (!channel) {
     throw new APIError(404, "Channel not found!");
   }
 
-  if (channelId === req.user._id.toString()) {
+  // Prevent self-subscription
+  if (channel._id.equals(subscriberId)) {
     throw new APIError(400, "You cannot subscribe to yourself!");
   }
 
-  const alreadySubscribed = await Subscription.findOne({
+  // Check existing subscription
+  const existingSubscription = await Subscription.findOne({
     channel: channelId,
-    subscriber: req.user._id,
+    subscriber: subscriberId,
   });
 
-  if (alreadySubscribed) {
-    await alreadySubscribed.deleteOne();
-    return res
-      .status(200)
-      .json(new APIResponse(200, null, "Channel unsubscribed successfully"));
+  let isSubscribed;
+
+  if (existingSubscription) {
+    // Unsubscribe
+    await existingSubscription.deleteOne();
+    isSubscribed = false;
   } else {
+    // Subscribe
     const subscription = await Subscription.create({
       channel: channelId,
-      subscriber: req.user._id,
+      subscriber: subscriberId,
     });
 
+    isSubscribed = true;
+
+    // Create notification
     const notification = await Notification.create({
       recipient: channelId,
-      sender: req.user._id,
+      sender: subscriberId,
       type: "new_subscriber",
       message: `${req.user.username} subscribed to your channel`,
       resource: subscription._id,
     });
 
+    // Emit real-time notification
     const io = getSocketIO();
 
     io.to(`userId:${channelId}`).emit("notification", notification);
-
-    return res
-      .status(201)
-      .json(new APIResponse(201, null, "Channel subscribed successfully"));
   }
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        { isSubscribed },
+        isSubscribed
+          ? "Channel subscribed successfully"
+          : "Channel unsubscribed successfully"
+      )
+    );
 });
 
 const getChannelSubscribers = asyncHandler(async (req, res) => {
@@ -211,10 +230,6 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
 });
 
 const checkSubscriptionStatus = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new APIError(401, "Unauthorized request!");
-  }
-
   const { channelId } = req.params;
 
   if (!channelId) {
@@ -231,20 +246,26 @@ const checkSubscriptionStatus = asyncHandler(async (req, res) => {
     throw new APIError(404, "Channel not found!");
   }
 
-  const subscription = await Subscription.exists({
-    channel: channelId,
-    subscriber: req.user._id,
-  });
+  let isSubscribed = false;
 
-  return res.status(200).json(
-    new APIResponse(
-      200,
-      {
-        isSubscribed: Boolean(subscription),
-      },
-      "Subscription status fetched successfully"
-    )
-  );
+  if (req.user) {
+    const subscription = await Subscription.exists({
+      channel: channelId,
+      subscriber: req.user._id,
+    });
+
+    isSubscribed = Boolean(subscription);
+  }
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        { isSubscribed },
+        "Subscription status fetched successfully"
+      )
+    );
 });
 
 export {

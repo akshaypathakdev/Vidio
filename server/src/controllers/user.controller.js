@@ -603,10 +603,14 @@ const searchUsers = asyncHandler(async (req, res) => {
   const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const searchRegex = new RegExp(escapedQuery, "i");
 
+  const userId = req.user?._id;
+
   const pipeline = [
     {
       $match: {
-        _id: { $ne: req.user._id },
+        ...(userId && {
+          _id: { $ne: new mongoose.Types.ObjectId(userId) },
+        }),
         $or: [{ username: searchRegex }, { fullName: searchRegex }],
       },
     },
@@ -829,13 +833,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         channelsSubscribedToCount: {
           $size: "$subscribedTo",
         },
-        isSubscribed: {
-          $cond: {
-            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
-            then: true,
-            else: false,
-          },
-        },
+        isSubscribed: req.user?._id
+          ? {
+              $in: [
+                new mongoose.Types.ObjectId(req.user._id),
+                "$subscribers.subscriber",
+              ],
+            }
+          : false,
       },
     },
     {

@@ -64,9 +64,9 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         _id: new mongoose.Types.ObjectId(playlistId),
         $or: [
           { isPublic: true },
-          {
-            owner: new mongoose.Types.ObjectId(req.user._id),
-          },
+          ...(req.user?._id
+            ? [{ owner: new mongoose.Types.ObjectId(req.user._id) }]
+            : []),
         ],
       },
     },
@@ -340,9 +340,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     }
   );
 
-  if (playlists.docs.length === 0) {
-    throw new APIError(404, "No playlists found!");
-  }
+  // if (playlists.docs.length === 0) {
+  //   throw new APIError(404, "No playlists found!");
+  // }
 
   return res
     .status(200)

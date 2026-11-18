@@ -1,28 +1,26 @@
 import mongoose from "mongoose";
+
 import { Video } from "../models/video.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Like } from "../models/like.model.js";
+
 import { APIError } from "../utils/APIError.js";
 import { APIResponse } from "../utils/APIResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { User } from "../models/user.model.js";
 
-const getChannelStats = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new APIError(401, "Unauthorized request!");
-  }
-
-  const userId = req.user._id;
+// Reusable function to calculate channel statistics
+const calculateChannelStats = async (userId) => {
+  const channelId = new mongoose.Types.ObjectId(userId);
 
   const [totalSubscribers, videoAggregate, likeAggregate] = await Promise.all([
     Subscription.countDocuments({
-      channel: userId,
+      channel: channelId,
     }),
 
     Video.aggregate([
       {
         $match: {
-          owner: new mongoose.Types.ObjectId(userId),
+          owner: channelId,
         },
       },
       {
@@ -48,7 +46,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
       },
       {
         $match: {
-          "videoInfo.owner": new mongoose.Types.ObjectId(userId),
+          "videoInfo.owner": channelId,
         },
       },
       {
@@ -60,18 +58,45 @@ const getChannelStats = asyncHandler(async (req, res) => {
     ]),
   ]);
 
-  const stats = {
+  return {
     subscribers: totalSubscribers || 0,
     totalVideos: videoAggregate[0]?.totalVideos || 0,
     totalViews: videoAggregate[0]?.totalViews || 0,
     totalLikes: likeAggregate[0]?.totalLikes || 0,
   };
+};
+
+// Public: Get statistics of any channel using userId
+const getChannelStats = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new APIError(400, "Invalid channel ID!");
+  }
+
+  const stats = await calculateChannelStats(userId);
 
   return res
     .status(200)
     .json(new APIResponse(200, stats, "Channel stats fetched successfully"));
 });
 
+// Get statistics of the currently authenticated user
+const getCurrentUserStats = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new APIError(401, "Unauthorized request!");
+  }
+
+  const stats = await calculateChannelStats(req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(200, stats, "Your channel stats fetched successfully")
+    );
+});
+
+// Get videos belonging to the currently authenticated user
 const getChannelVideos = asyncHandler(async (req, res) => {
   if (!req.user) {
     throw new APIError(401, "Unauthorized request!");
@@ -88,13 +113,11 @@ const getChannelVideos = asyncHandler(async (req, res) => {
           owner: new mongoose.Types.ObjectId(userId),
         },
       },
-
       {
         $sort: {
           createdAt: sortType === "asc" ? 1 : -1,
         },
       },
-
       {
         $lookup: {
           from: "likes",
@@ -103,7 +126,6 @@ const getChannelVideos = asyncHandler(async (req, res) => {
           as: "likes",
         },
       },
-
       {
         $addFields: {
           likesCount: {
@@ -111,7 +133,6 @@ const getChannelVideos = asyncHandler(async (req, res) => {
           },
         },
       },
-
       {
         $project: {
           likes: 0,
@@ -124,17 +145,9 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     }
   );
 
-  // if (videos.docs.length === 0) {
-  //   return res
-  //     .status(200)
-  //     .json(
-  //       new APIResponse(200, videos, "Channel videos fetched successfully!")
-  //     );
-  // }
-
   return res
     .status(200)
     .json(new APIResponse(200, videos, "Channel videos fetched successfully!"));
 });
 
-export { getChannelStats, getChannelVideos };
+export { getChannelStats, getCurrentUserStats, getChannelVideos };

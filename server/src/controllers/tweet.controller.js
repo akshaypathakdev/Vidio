@@ -72,7 +72,6 @@ const getUserTweets = asyncHandler(async (req, res) => {
         owner: new mongoose.Types.ObjectId(userId),
       },
     },
-
     {
       $lookup: {
         from: "users",
@@ -90,11 +89,9 @@ const getUserTweets = asyncHandler(async (req, res) => {
         ],
       },
     },
-
     {
       $unwind: "$ownerDetails",
     },
-
     {
       $sort: {
         createdAt: -1,

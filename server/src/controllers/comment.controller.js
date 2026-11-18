@@ -18,6 +18,10 @@ const getCommentById = asyncHandler(async (req, res) => {
     throw new APIError(400, "Invalid comment id!");
   }
 
+  const userId = req.user?._id
+    ? new mongoose.Types.ObjectId(req.user._id)
+    : null;
+
   const [comment] = await Comment.aggregate([
     {
       $match: {
@@ -62,9 +66,7 @@ const getCommentById = asyncHandler(async (req, res) => {
         likesCount: {
           $size: "$likes",
         },
-        isLiked: {
-          $in: [new mongoose.Types.ObjectId(req.user._id), "$likes.likedBy"],
-        },
+        isLiked: userId ? { $in: [userId, "$likes.likedBy"] } : false,
       },
     },
 
@@ -130,6 +132,10 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
   const { page = 1, limit = 10, sortType = "desc" } = req.query;
 
+  const userId = req.user?._id
+    ? new mongoose.Types.ObjectId(req.user._id)
+    : null;
+
   const comments = await Comment.aggregatePaginate(
     Comment.aggregate([
       {
@@ -176,9 +182,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
           likesCount: {
             $size: "$likes",
           },
-          isLiked: {
-            $in: [new mongoose.Types.ObjectId(req.user._id), "$likes.likedBy"],
-          },
+          isLiked: userId ? { $in: [userId, "$likes.likedBy"] } : false,
         },
       },
 
@@ -227,11 +231,11 @@ const getVideoComments = asyncHandler(async (req, res) => {
     }
   );
 
-  if (comments.docs.length === 0) {
-    // comments.docs.length because aggregatePaginate() normally returns
-    // a pagination object, not a plain array
-    throw new APIError(404, "No comments found on this video");
-  }
+  // if (comments.docs.length === 0) {
+  //   // comments.docs.length because aggregatePaginate() normally returns
+  //   // a pagination object, not a plain array
+  //   throw new APIError(404, "No comments found on this video");
+  // }
 
   return res
     .status(200)
@@ -486,6 +490,10 @@ const getReplies = asyncHandler(async (req, res) => {
 
   const { page = 1, limit = 10, sortType = "desc" } = req.query;
 
+  const userId = req.user?._id
+    ? new mongoose.Types.ObjectId(req.user._id)
+    : null;
+
   const replies = await Comment.aggregatePaginate(
     Comment.aggregate([
       {
@@ -531,9 +539,7 @@ const getReplies = asyncHandler(async (req, res) => {
           likesCount: {
             $size: "$likes",
           },
-          isLiked: {
-            $in: [new mongoose.Types.ObjectId(req.user._id), "$likes.likedBy"],
-          },
+          isLiked: userId ? { $in: [userId, "$likes.likedBy"] } : false,
         },
       },
 
