@@ -19,10 +19,12 @@ export function AuthProvider({ children }) {
       const response = await api.get("/users/current-user");
 
       setUser(response.data.data);
-
       return response.data.data;
     } catch (error) {
-      setUser(null);
+      if (error.response?.status === 401) {
+        setUser(null);
+      }
+
       throw error;
     }
   }, []);

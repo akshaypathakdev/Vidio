@@ -5,7 +5,10 @@ function ChannelHeader({
   stats,
   formatCount,
   isOwner = false,
-  actions = null,
+  isAuthenticated = false,
+  isSubscribed = false,
+  onSubscribe,
+  subscribing = false,
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#111318]">
@@ -33,31 +36,10 @@ function ChannelHeader({
             <img
               src={channel.avatar}
               alt={channel.name}
-              className="
-                h-28
-                w-28
-                rounded-full
-                border-4
-                border-[#111318]
-                object-cover
-              "
+              className="h-28 w-28 rounded-full border-4 border-[#111318] object-cover"
             />
           ) : (
-            <div
-              className="
-                flex
-                h-28
-                w-28
-                items-center
-                justify-center
-                rounded-full
-                border-4
-                border-[#111318]
-                bg-gray-800
-                text-3xl
-                font-semibold
-              "
-            >
+            <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-[#111318] bg-gray-800 text-3xl font-semibold">
               {channel.initial}
             </div>
           )}
@@ -66,24 +48,16 @@ function ChannelHeader({
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* Details */}
           <div className="max-w-2xl">
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              {channel.name}
-            </h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">{channel.name}</h1>
 
-            <p className="mt-1 text-sm text-gray-400">
-              {channel.username}
-            </p>
+            <p className="mt-1 text-sm text-gray-400">{channel.username}</p>
 
             <div className="mt-3 flex flex-wrap gap-4 text-sm text-gray-400">
               {/* Subscribers */}
               {isOwner ? (
                 <Link
                   to="/subscribers"
-                  className="
-                    rounded-md
-                    transition
-                    hover:text-white
-                  "
+                  className="rounded-md transition hover:text-white"
                 >
                   <strong className="text-white">
                     {formatCount(stats.subscribers)}
@@ -108,24 +82,20 @@ function ChannelHeader({
               </span>
 
               {/* Views */}
-              {stats.totalViews !== undefined && (
-                <span>
-                  <strong className="text-white">
-                    {formatCount(stats.totalViews)}
-                  </strong>{" "}
-                  views
-                </span>
-              )}
+              <span>
+                <strong className="text-white">
+                  {formatCount(stats.totalViews)}
+                </strong>{" "}
+                views
+              </span>
 
               {/* Likes */}
-              {stats.totalLikes !== undefined && (
-                <span>
-                  <strong className="text-white">
-                    {formatCount(stats.totalLikes)}
-                  </strong>{" "}
-                  likes
-                </span>
-              )}
+              <span>
+                <strong className="text-white">
+                  {formatCount(stats.totalLikes)}
+                </strong>{" "}
+                likes
+              </span>
             </div>
           </div>
 
@@ -134,21 +104,31 @@ function ChannelHeader({
             {isOwner ? (
               <Link
                 to="/channel/edit"
-                className="
-                  rounded-xl
-                  bg-red-600
-                  px-5
-                  py-2.5
-                  text-sm
-                  font-semibold
-                  transition
-                  hover:bg-red-700
-                "
+                className="rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold transition hover:bg-red-700"
               >
                 Edit Channel
               </Link>
             ) : (
-              actions
+              <button
+                type="button"
+                onClick={onSubscribe}
+                disabled={subscribing}
+                className={`
+        rounded-xl px-5 py-2.5 text-sm font-semibold
+        transition disabled:cursor-not-allowed disabled:opacity-60
+        ${
+          isSubscribed
+            ? "border border-white/20 bg-[#22252d] text-white hover:bg-[#30333d]"
+            : "bg-red-600 text-white hover:bg-red-700"
+        }
+      `}
+              >
+                {subscribing
+                  ? "Please wait..."
+                  : isSubscribed
+                    ? "Subscribed"
+                    : "Subscribe"}
+              </button>
             )}
           </div>
         </div>

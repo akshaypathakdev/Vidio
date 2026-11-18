@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { useAuth } from "../../../context/AuthContext.jsx";
 
 import {
-  getChannelStats,
+  getCurrentUserStats,
   getChannelVideos,
   getChannelPlaylists,
 } from "../channel.service.js";
@@ -66,7 +67,7 @@ function Channel() {
         setError("");
 
         const [statsData, videosData, playlistsData] = await Promise.all([
-          getChannelStats(controller.signal),
+          getCurrentUserStats(controller.signal),
           getChannelVideos(controller.signal),
           getChannelPlaylists(controller.signal),
         ]);
@@ -75,11 +76,7 @@ function Channel() {
 
         setStats(statsData || {});
         setVideos(Array.isArray(videosData) ? videosData : []);
-        setPlaylists(
-          Array.isArray(playlistsData)
-            ? playlistsData
-            : playlistsData?.docs || [],
-        );
+        setPlaylists(Array.isArray(playlistsData) ? playlistsData : []);
       } catch (err) {
         if (controller.signal.aborted) return;
 

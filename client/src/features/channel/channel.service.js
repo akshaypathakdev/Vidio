@@ -1,21 +1,38 @@
 import api from "../../services/api.js";
+import withAuth from "../../services/withAuth.js";
 
-async function getChannelStats(signal) {
-  const response = await api.get("/dashboard/stats", {
+// Public channel statistics
+async function getChannelStats(userId, signal) {
+  const response = await api.get(`/dashboard/stats/${userId}`, {
     signal,
   });
 
   return response.data.data;
 }
 
-async function getChannelVideos(signal) {
-  const response = await api.get("/dashboard/videos", {
-    signal,
-  });
+// Authenticated user's statistics
+async function getCurrentUserStats(signal) {
+  return withAuth(async () => {
+    const response = await api.get("/dashboard/stats", {
+      signal,
+    });
 
-  return response.data.data.docs || [];
+    return response.data.data;
+  });
 }
 
+// Authenticated user's videos
+async function getChannelVideos(signal) {
+  return withAuth(async () => {
+    const response = await api.get("/dashboard/videos", {
+      signal,
+    });
+
+    return response.data.data.docs || [];
+  });
+}
+
+// Public channel profile
 async function getUserChannel(username, signal) {
   const response = await api.get(`/users/c/${username}`, {
     signal,
@@ -24,21 +41,28 @@ async function getUserChannel(username, signal) {
   return response.data.data;
 }
 
+// Update channel details
 async function updateChannelDetails(fullName, username) {
-  const response = await api.patch("/users/update-details", {
-    fullName,
-    username,
+  return withAuth(async () => {
+    const response = await api.patch("/users/update-details", {
+      fullName,
+      username,
+    });
+
+    return response.data;
   });
-
-  return response.data;
 }
 
+// Update channel files
 async function updateChannelFiles(formData) {
-  const response = await api.patch("/users/update-files", formData);
+  return withAuth(async () => {
+    const response = await api.patch("/users/update-files", formData);
 
-  return response.data;
+    return response.data;
+  });
 }
 
+// Public channel videos
 async function getUserChannelVideos(username, signal) {
   const response = await api.get(`/videos/c/${username}/videos`, {
     signal,
@@ -47,19 +71,28 @@ async function getUserChannelVideos(username, signal) {
   return response.data.data;
 }
 
+// Toggle subscription
 async function toggleSubscription(channelId) {
-  const response = await api.post(`/subscriptions/c/${channelId}`);
+  return withAuth(async () => {
+    const response = await api.post(`/subscriptions/c/${channelId}`);
 
-  return response.data.data;
+    console.log(response.data.data)
+
+    return response.data.data;
+  });
 }
 
+// Authenticated user's playlists
 async function getChannelPlaylists(signal) {
-  const response = await api.get("/playlist/user/me", { signal });
+  return withAuth(async () => {
+    const response = await api.get("/playlist/user/me", { signal });
 
-  const data = response.data.data;
-  return Array.isArray(data) ? data : data?.docs || [];
+    const data = response.data.data;
+    return Array.isArray(data) ? data : data?.docs || [];
+  });
 }
 
+// Public channel playlists
 async function getUserChannelPlaylists(username, signal) {
   const response = await api.get(
     `/playlist/user/username/${encodeURIComponent(username)}`,
@@ -72,6 +105,7 @@ async function getUserChannelPlaylists(username, signal) {
 
 export {
   getChannelStats,
+  getCurrentUserStats,
   getChannelVideos,
   updateChannelDetails,
   updateChannelFiles,

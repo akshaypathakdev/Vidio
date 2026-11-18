@@ -134,6 +134,7 @@ function App() {
 
               {/* Subscriptions */}
               <Route path="/subscriptions" element={<Subscriptions />} />
+              <Route path="/subscribers" element={<Subscribers />} />
               <Route
                 path="/subscriptions/manage"
                 element={<ManageSubscriptions />}

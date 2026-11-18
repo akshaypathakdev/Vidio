@@ -1,37 +1,51 @@
 import api from "../../services/api.js";
+import withAuth from "../../services/withAuth.js";
 
 async function getUserSubscriptions(userId, signal) {
-  const response = await api.get(`/subscriptions/u/${userId}`, { signal });
+  return withAuth(async () => {
+    const response = await api.get(`/subscriptions/u/${userId}`, {
+      signal,
+    });
 
-  return response.data.data.docs || [];
+    return response.data.data.docs || [];
+  });
 }
 
 async function unsubscribeFromChannel(channelId) {
-  const response = await api.post(`/subscriptions/c/${channelId}`);
+  return withAuth(async () => {
+    const response = await api.post(`/subscriptions/c/${channelId}`);
 
-  return response.data;
+    return response.data;
+  });
 }
 
 async function toggleSubscription(channelId) {
-  const response = await api.post(`/subscriptions/c/${channelId}`);
+  return withAuth(async () => {
+    const response = await api.post(`/subscriptions/c/${channelId}`);
 
-  return response.data;
+    return response.data;
+  });
 }
 
 async function getSubscribers(userId, signal) {
-  const response = await api.get(`/subscriptions/s/${userId}`, { signal });
+  return withAuth(async () => {
+    const response = await api.get(`/subscriptions/s/${userId}`, {
+      signal,
+    });
 
-  const data = response.data?.data;
+    const data = response.data?.data;
+    const subscriberList = data?.docs || data || [];
 
-  const subscriberList = data?.docs || data || [];
-
-  return Array.isArray(subscriberList) ? subscriberList : [];
+    return Array.isArray(subscriberList) ? subscriberList : [];
+  });
 }
 
 const getSubscriptionStatus = async (channelId) => {
-  const response = await api.get(`/subscriptions/status/${channelId}`);
+  return withAuth(async () => {
+    const response = await api.get(`/subscriptions/status/${channelId}`);
 
-  return response.data;
+    return response.data;
+  });
 };
 
 export {

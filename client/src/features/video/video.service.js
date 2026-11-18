@@ -1,4 +1,5 @@
 import api from "../../services/api.js";
+import withAuth from "../../services/withAuth.js";
 
 const uploadVideo = async (
   { title, description, tags, videoFile, thumbnail },
@@ -24,24 +25,30 @@ const uploadVideo = async (
     formData.append("thumbnail", thumbnail);
   }
 
-  const response = await api.post("/videos", formData, {
-    onUploadProgress,
-  });
+  const response = await withAuth(() =>
+    api.post("/videos", formData, {
+      onUploadProgress,
+    }),
+  );
 
   return response.data.data;
 };
 
+// Public: Anyone can watch a video.
 const getVideo = async (videoId) => {
   const response = await api.get(`/videos/${videoId}`);
 
   return response.data.data;
 };
 
+// Public: Fetches the public video feed.
 const getMyVideos = async () => {
   const response = await api.get("/videos");
+
   return response.data.data;
 };
 
+// Optional authentication: Anonymous users can also request a stream token.
 const getStreamToken = async (videoId) => {
   const response = await api.post(`/videos/${videoId}/stream-token`);
 
@@ -56,6 +63,7 @@ const getHlsFileUrl = (processingId, path) => {
   return `${api.defaults.baseURL}/videos/stream/${processingId}/${path}`;
 };
 
+// Optional authentication: Recording a video view does not require login.
 async function recordVideoView(videoId, sessionId) {
   const response = await api.post(`/videos/${videoId}/view`, {
     sessionId,
@@ -81,45 +89,60 @@ const updateVideo = async ({
     formData.append("thumbnail", thumbnail);
   }
 
-  const response = await api.patch(`/videos/${videoId}`, formData);
+  const response = await withAuth(() =>
+    api.patch(`/videos/${videoId}`, formData),
+  );
 
   return response.data;
 };
 
 const togglePublishStatus = async (videoId) => {
-  const response = await api.patch(`/videos/toggle/publish/${videoId}`);
+  const response = await withAuth(() =>
+    api.patch(`/videos/toggle/publish/${videoId}`),
+  );
 
   return response.data;
 };
 
 const deleteVideo = async (videoId) => {
-  const response = await api.delete(`/videos/${videoId}`);
+  const response = await withAuth(() => api.delete(`/videos/${videoId}`));
+
   return response.data.data;
 };
 
+// Protected: Like operations require authentication.
 const toggleVideoLike = async (videoId) => {
-  const response = await api.post(`/likes/toggle/v/${videoId}`);
+  const response = await withAuth(() => api.post(`/likes/toggle/v/${videoId}`));
+
   return response.data.data;
 };
 
 const getLikedVideos = async () => {
-  const response = await api.get("/likes/videos");
+  const response = await withAuth(() => api.get("/likes/videos"));
 
   return response.data.data;
 };
 
+// Protected: Watch Later operations require authentication.
 const getWatchLaterVideos = async () => {
-  const response = await api.get("/watch-later/");
+  const response = await withAuth(() => api.get("/watch-later/"));
+
   return response.data.data;
 };
 
 const addToWatchLater = async (videoId) => {
-  const response = await api.patch(`/watch-later/add/${videoId}`);
+  const response = await withAuth(() =>
+    api.patch(`/watch-later/add/${videoId}`),
+  );
+
   return response.data.data;
 };
 
 const removeFromWatchLater = async (videoId) => {
-  const response = await api.patch(`/watch-later/remove/${videoId}`);
+  const response = await withAuth(() =>
+    api.patch(`/watch-later/remove/${videoId}`),
+  );
+
   return response.data.data;
 };
 

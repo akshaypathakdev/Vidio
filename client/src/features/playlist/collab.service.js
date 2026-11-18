@@ -1,4 +1,5 @@
 import api from "../../services/api.js";
+import withAuth from "../../services/withAuth.js";
 
 const BASE_URL = "/playlist-collab";
 
@@ -39,11 +40,13 @@ async function searchUsers(query, page = 1, limit = 10) {
 
 // Send an invitation to collaborate on a playlist.
 async function invitePlaylistCollaborator(playlistId, userId) {
-  const response = await api.post(
-    `${BASE_URL}/playlist/${playlistId}/invite/${userId}`,
-  );
+  return withAuth(async () => {
+    const response = await api.post(
+      `${BASE_URL}/playlist/${playlistId}/invite/${userId}`,
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 // Get accepted collaborators for a playlist.
@@ -58,90 +61,110 @@ async function getPlaylistCollaborators(playlistId, params = {}) {
 
 // Remove an accepted collaborator.
 async function removePlaylistCollaborator(playlistId, userId) {
-  const response = await api.delete(
-    `${BASE_URL}/playlist/${playlistId}/collaborator/${userId}`,
-  );
+  return withAuth(async () => {
+    const response = await api.delete(
+      `${BASE_URL}/playlist/${playlistId}/collaborator/${userId}`,
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 // Cancel an invitation sent by the current user.
 async function cancelPlaylistInvitation(invitationId) {
-  const response = await api.delete(
-    `${BASE_URL}/invitation/${invitationId}/cancel`,
-  );
+  return withAuth(async () => {
+    const response = await api.delete(
+      `${BASE_URL}/invitation/${invitationId}/cancel`,
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 // Get all received invitations.
 async function getAllPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations`, { params });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations`, { params });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Get received pending invitations.
 async function getPendingPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations/pending`, {
-    params,
-  });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations/pending`, {
+      params,
+    });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Get received accepted invitations.
 async function getAcceptedPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations/accepted`, {
-    params,
-  });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations/accepted`, {
+      params,
+    });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Get invitations sent by the current user.
 async function getSentPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations/sent`, {
-    params,
-  });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations/sent`, {
+      params,
+    });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Get pending invitations sent by the current user.
 async function getSentPendingPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations/sent/pending`, {
-    params,
-  });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations/sent/pending`, {
+      params,
+    });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Get accepted invitations sent by the current user.
 async function getSentAcceptedPlaylistInvitations(params = {}) {
-  const response = await api.get(`${BASE_URL}/invitations/sent/accepted`, {
-    params,
-  });
+  return withAuth(async () => {
+    const response = await api.get(`${BASE_URL}/invitations/sent/accepted`, {
+      params,
+    });
 
-  return response.data?.data;
+    return response.data?.data;
+  });
 }
 
 // Accept a received invitation.
 async function acceptPlaylistInvitation(invitationId) {
-  const response = await api.patch(
-    `${BASE_URL}/invitation/${invitationId}/accept`,
-  );
+  return withAuth(async () => {
+    const response = await api.patch(
+      `${BASE_URL}/invitation/${invitationId}/accept`,
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 // Reject a received invitation.
 async function rejectPlaylistInvitation(invitationId) {
-  const response = await api.delete(
-    `${BASE_URL}/invitation/${invitationId}/reject`,
-  );
+  return withAuth(async () => {
+    const response = await api.delete(
+      `${BASE_URL}/invitation/${invitationId}/reject`,
+    );
 
-  return response.data;
+    return response.data;
+  });
 }
 
 export {
