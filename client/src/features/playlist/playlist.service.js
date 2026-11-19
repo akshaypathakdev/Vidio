@@ -4,7 +4,7 @@ import withAuth from "../../services/withAuth.js";
 // Create a playlist.
 async function createPlaylist(playlistData) {
   return withAuth(async () => {
-    const response = await api.post("/playlist/", playlistData);
+    const response = await api.post("/playlist", playlistData);
     return response.data;
   });
 }
