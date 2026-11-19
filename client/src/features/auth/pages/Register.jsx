@@ -15,21 +15,21 @@ const Register = () => {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-10">
-            <AuthLogo/>
+            <AuthLogo />
           </div>
 
           <RegisterForm />
 
-        {/* Register */}
-      <p className="text-center text-sm text-gray-500 mt-8">
-        Have an account?{" "}
-        <Link
-          to="/login"
-          className="text-white hover:text-red-400 font-medium transition"
-        >
-          Login
-        </Link>
-        </p>
+          {/* Register */}
+          <p className="text-center text-sm text-gray-500 mt-8">
+            Have an account?{" "}
+            <Link
+              to="/login"
+              className="text-white hover:text-red-400 font-medium transition"
+            >
+              Login
+            </Link>
+          </p>
           {/* Terms */}
           <p className="text-center text-xs text-gray-600 mt-8 leading-relaxed">
             By continuing, you agree to Vidio's{" "}
