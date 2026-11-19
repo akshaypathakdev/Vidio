@@ -13,8 +13,15 @@ const videoProcessingQueue = new Queue("video-processing", {
       delay: 5000, //Starts with a 5-second delay
     },
 
-    removeOnComplete: true, //Removes successfully completed jobs from Redis
-    removeOnFail: false,
+    removeOnComplete: {
+      age: 86400, // retains Completed jobs for up to 24 hours.
+      count: 1000,
+    },
+
+    removeOnFail: {
+      age: 604800, // Failed jobs for up to 7 days.
+      count: 5000,
+    },
   },
 });
 
