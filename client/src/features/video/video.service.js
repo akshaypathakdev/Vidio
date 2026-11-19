@@ -43,7 +43,7 @@ const getVideo = async (videoId) => {
 
 // Public: Fetches the public video feed.
 const getMyVideos = async () => {
-  const response = await api.get("/videos");
+  const response = await api.get("/videos/me");
 
   return response.data.data;
 };
