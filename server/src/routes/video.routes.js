@@ -13,6 +13,7 @@ import {
   getVideosByUsername,
   searchVideos,
   getMyVideos,
+  getRandomVideoFeed,
 } from "../controllers/video.controller.js";
 import {
   verifyJWT,
@@ -46,6 +47,8 @@ router
 
 router.route("/search").get(optionalVerifyJWT, searchVideos);
 router.route("/me").get(verifyJWT, getMyVideos);
+
+router.route("/feed").get(optionalVerifyJWT, getRandomVideoFeed);
 
 router
   .route("/:videoId")

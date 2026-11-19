@@ -118,16 +118,25 @@ function VideoCard({
         ? "Remove from Watch Later"
         : "Remove from History";
 
-  const duration = Math.max(0, Number(video.duration) || 0);
-  const channelName = video.channel || "Unknown";
+  // Support both the old card data and the MongoDB video document.
+  const videoId = video.id || video._id;
+  const channelName =
+    video.ownerDetails?.username || video.channel || "Unknown";
+  const channelAvatar = video.ownerDetails?.avatar || video.avatar;
 
-  const formattedDate = video.uploaded
-    ? new Date(video.uploaded).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
+  const duration = Math.max(0, Number(video.duration) || 0);
+
+  const formattedDate =
+    video.uploaded || video.createdAt
+      ? new Date(video.uploaded || video.createdAt).toLocaleDateString(
+          "en-IN",
+          {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          },
+        )
+      : "";
 
   const formattedViews =
     typeof video.views === "number"
@@ -137,7 +146,7 @@ function VideoCard({
   return (
     <article className="group">
       {/* Thumbnail */}
-      <Link to={`/video/watch/${video.id}`}>
+      <Link to={`/video/watch/${videoId}`}>
         <div className="relative aspect-video overflow-hidden rounded-xl bg-[#181a20]">
           {!thumbnailError && video.thumbnail ? (
             <img
@@ -165,9 +174,9 @@ function VideoCard({
       <div className="mt-3 flex gap-3">
         {/* Channel avatar */}
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600 text-xs font-semibold text-white">
-          {video.avatar && !avatarError ? (
+          {channelAvatar && !avatarError ? (
             <img
-              src={video.avatar}
+              src={channelAvatar}
               alt={`${channelName} avatar`}
               loading="lazy"
               onError={() => setAvatarError(true)}
@@ -181,7 +190,7 @@ function VideoCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
             <Link
-              to={`/video/watch/${video.id}`}
+              to={`/video/watch/${videoId}`}
               className="min-w-0 flex-1 line-clamp-2 text-sm font-semibold leading-5 text-white transition duration-200 hover:text-gray-300"
             >
               {video.title}
@@ -202,7 +211,6 @@ function VideoCard({
               {menuOpen && (
                 <div className="absolute right-0 top-9 z-50 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#111318] py-1 shadow-xl">
                   {isPlaylistCard ? (
-                    /* Playlist: only remove from playlist */
                     <button
                       type="button"
                       disabled={removing}
@@ -215,7 +223,6 @@ function VideoCard({
                       </span>
                     </button>
                   ) : isCollectionCard ? (
-                    /* Liked Videos, Watch Later, and History */
                     <button
                       type="button"
                       disabled={removing}
@@ -277,7 +284,7 @@ function VideoCard({
                       {/* Edit Video */}
                       {isOwner && (
                         <Link
-                          to={`/video/edit/${video.id}`}
+                          to={`/video/edit/${videoId}`}
                           onClick={() => setMenuOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
                         >
@@ -294,7 +301,7 @@ function VideoCard({
 
           {/* Channel */}
           <Link
-            to={`/channel/${video.channel}`}
+            to={`/channel/${channelName}`}
             className="mt-1 block truncate text-sm text-gray-400 transition duration-200 hover:text-gray-200"
           >
             {channelName}

@@ -1,107 +1,181 @@
-//import VideoCard from "../../../components/videoCard/VideoCard.jsx";
+import { useCallback, useEffect, useRef, useState } from "react";
+import VideoCard from "../../../components/videoCard/VideoCard.jsx";
+import { getRandomVideoFeed } from "../home.service.js";
 
-// const videos = [
-//   {
-//     id: 1,
-//     thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
-//     title: "Build a Modern Web Application from Scratch",
-//     channel: "Code Academy",
-//     views: "1.2M views",
-//     uploaded: "2 days ago",
-//     duration: "18:42",
-//   },
-//   {
-//     id: 2,
-//     thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
-//     title: "JavaScript Backend Development — Complete Guide",
-//     channel: "Dev Mastery",
-//     views: "845K views",
-//     uploaded: "5 days ago",
-//     duration: "24:15",
-//   },
-//   {
-//     id: 3,
-//     thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c",
-//     title: "How I Built a Full Stack Video Platform",
-//     channel: "Tech World",
-//     views: "532K views",
-//     uploaded: "1 week ago",
-//     duration: "31:27",
-//   },
-//   {
-//     id: 4,
-//     thumbnail: "https://images.unsplash.com/photo-1550745165-9bc0b252726f",
-//     title: "The Future of Artificial Intelligence",
-//     channel: "Future Labs",
-//     views: "2.4M views",
-//     uploaded: "3 days ago",
-//     duration: "12:08",
-//   },
-//   {
-//     id: 5,
-//     thumbnail: "https://images.unsplash.com/photo-1511512578047-dfb367046420",
-//     title: "The Best Games You Need to Play in 2026",
-//     channel: "Game Central",
-//     views: "923K views",
-//     uploaded: "4 days ago",
-//     duration: "15:34",
-//   },
-//   {
-//     id: 6,
-//     thumbnail: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618",
-//     title: "How Music Production Actually Works",
-//     channel: "Sound Lab",
-//     views: "674K views",
-//     uploaded: "1 week ago",
-//     duration: "20:11",
-//   },
-//   {
-//     id: 7,
-//     thumbnail: "https://images.unsplash.com/photo-1531297484001-80022131f5a1",
-//     title: "10 Programming Concepts Every Developer Should Know",
-//     channel: "Programming Hub",
-//     views: "1.8M views",
-//     uploaded: "2 weeks ago",
-//     duration: "22:49",
-//   },
-//   {
-//     id: 8,
-//     thumbnail: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
-//     title: "How to Become a Better Software Engineer",
-//     channel: "Engineering Daily",
-//     views: "756K views",
-//     uploaded: "3 days ago",
-//     duration: "17:36",
-//   },
-// ];
-
-const videos = [];
 function Home() {
+  const [videos, setVideos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
+  const [loadMoreError, setLoadMoreError] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  const pageRef = useRef(1);
+  const seedRef = useRef(Math.floor(Math.random() * 2147483646) + 1);
+  const observerRef = useRef(null);
+  const loadMoreRef = useRef(null);
+  const loadingMoreRef = useRef(false);
+
+  // Load the initial feed or refresh it
+  const fetchFeed = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setLoadMoreError(null);
+    setVideos([]);
+    setHasMore(true);
+    loadingMoreRef.current = false;
+
+    pageRef.current = 1;
+    seedRef.current = Math.floor(Math.random() * 2147483646) + 1;
+
+    try {
+      const result = await getRandomVideoFeed({
+        page: 1,
+        limit: 20,
+        seed: seedRef.current,
+      });
+
+      setVideos(result.videos);
+      setHasMore(result.pagination.hasMore);
+      pageRef.current = 1;
+    } catch (error) {
+      setError("Failed to load videos.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch the next page and append it
+  const fetchNextPage = useCallback(async () => {
+    if (loading || loadingMoreRef.current || !hasMore) return;
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    const nextPage = pageRef.current + 1;
+
+    try {
+      const result = await getRandomVideoFeed({
+        page: nextPage,
+        limit: 20,
+        seed: seedRef.current,
+      });
+
+      setVideos((prev) => [...prev, ...result.videos]);
+      setHasMore(result.pagination.hasMore);
+      pageRef.current = nextPage;
+    } catch (error) {
+      setLoadMoreError("Failed to load more videos.");
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [loading, hasMore]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchFeed();
+  }, [fetchFeed]);
+
+  // Observe the element at the bottom of the feed
+  useEffect(() => {
+    const target = loadMoreRef.current;
+
+    if (!target || loading || !hasMore) return;
+
+    observerRef.current?.disconnect();
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "400px",
+        threshold: 0,
+      },
+    );
+
+    observerRef.current.observe(target);
+
+    return () => observerRef.current?.disconnect();
+  }, [loading, hasMore, fetchNextPage]);
+
   return (
     <div className="min-h-screen bg-[#08090b] text-white">
-      <div className="flex">
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <section className="mt-6">
-            <div
-              className="
-                grid
-                grid-cols-1
-                gap-x-5
-                gap-y-8
-                sm:grid-cols-2
-                lg:grid-cols-3
-                xl:grid-cols-4
-              "
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <section className="mt-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Explore</h1>
+
+            <button
+              onClick={fetchFeed}
+              disabled={loading}
+              className="rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {videos == []
-                ? videos.map((video) => (
-                    <VideoCard key={video.id} video={video} />
-                  ))
-                : "Feed is coming soon."}
+              {loading ? "Refreshing..." : "Refresh feed"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {loading ? (
+              <div className="col-span-full py-20 text-center text-zinc-500">
+                Loading videos...
+              </div>
+            ) : error && videos.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-red-400">
+                <p>{error}</p>
+                <button
+                  onClick={fetchFeed}
+                  className="mt-4 text-white underline underline-offset-4"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : videos.length > 0 ? (
+              videos.map((video) => <VideoCard key={video._id} video={video} />)
+            ) : (
+              <div className="col-span-full py-20 text-center text-zinc-500">
+                No videos available yet.
+              </div>
+            )}
+          </div>
+
+          {/* Infinite scroll trigger */}
+          {!loading && hasMore && !loadMoreError && (
+            <div
+              ref={loadMoreRef}
+              className="flex justify-center py-10 text-sm text-zinc-500"
+            >
+              {loadingMore && "Loading more videos..."}
             </div>
-          </section>
-        </main>
-      </div>
+          )}
+
+          {/* Error loading the next page */}
+          {!loading && loadMoreError && videos.length > 0 && (
+            <div className="py-8 text-center text-zinc-400">
+              <p>{loadMoreError}</p>
+              <button
+                onClick={fetchNextPage}
+                disabled={loadingMore}
+                className="mt-3 text-white underline underline-offset-4 disabled:opacity-50"
+              >
+                {loadingMore ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          )}
+
+          {/* End of feed */}
+          {!loading && !hasMore && videos.length > 0 && (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              You've reached the end.
+            </p>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

@@ -109,10 +109,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
       ? suppliedExtension
       : ".mp4";
 
-    // 5. Upload the original video to B2.
+    // // 5. Upload the original video to B2.
     originalKey = `originals/${videoId}/original${extension}`;
 
-    await uploadFileToB2(videoFileLocalPath, originalKey);
+    // await uploadFileToB2(videoFileLocalPath, originalKey);
 
     // 6. Create the video document.
     video = await Video.create({
@@ -1002,6 +1002,88 @@ const recordVideoView = asyncHandler(async (req, res) => {
   );
 });
 
+const seededRandom = (seed) => {
+  let value = seed;
+
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+};
+
+const shuffleWithSeed = (array, seed) => {
+  const random = seededRandom(seed);
+
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+};
+
+const getRandomVideoFeed = asyncHandler(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 20));
+
+  // Reuse the seed across all pages of the same feed session
+  const seed =
+    Math.abs(parseInt(req.query.seed)) ||
+    Math.floor(Math.random() * 2147483646) + 1;
+
+  const videos = await Video.aggregate([
+    {
+      $match: {
+        isPublished: true,
+        processingStatus: "ready",
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$ownerDetails",
+    },
+  ]);
+
+  // Consistent random order for the same seed
+  shuffleWithSeed(videos, seed);
+
+  const total = videos.length;
+  const startIndex = (page - 1) * limit;
+  const paginatedVideos = videos.slice(startIndex, startIndex + limit);
+
+  return res.status(200).json(
+    new APIResponse(
+      200,
+      {
+        videos: paginatedVideos,
+        pagination: {
+          page,
+          limit,
+          total,
+          hasMore: startIndex + paginatedVideos.length < total,
+          seed,
+        },
+      },
+      "Video feed fetched successfully!"
+    )
+  );
+});
+
 export {
   getAllVideos,
   publishAVideo,
@@ -1016,4 +1098,5 @@ export {
   createStreamToken,
   searchVideos,
   getVideosByUsername,
+  getRandomVideoFeed,
 };
