@@ -112,7 +112,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     // // 5. Upload the original video to B2.
     originalKey = `originals/${videoId}/original${extension}`;
 
-    // await uploadFileToB2(videoFileLocalPath, originalKey);
+    await uploadFileToB2(videoFileLocalPath, originalKey);
 
     // 6. Create the video document.
     video = await Video.create({
