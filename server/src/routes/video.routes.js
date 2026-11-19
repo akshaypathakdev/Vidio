@@ -12,6 +12,7 @@ import {
   createStreamToken,
   getVideosByUsername,
   searchVideos,
+  getMyVideos,
 } from "../controllers/video.controller.js";
 import {
   verifyJWT,
@@ -26,7 +27,7 @@ const router = Router();
 
 router
   .route("/")
-  .get(getAllVideos)
+  .get(optionalVerifyJWT, getAllVideos)
   .post(
     verifyJWT,
     isEmailVerified,
@@ -43,17 +44,18 @@ router
     publishAVideo
   );
 
-router.route("/search").get(searchVideos);
+router.route("/search").get(optionalVerifyJWT, searchVideos);
+router.route("/me").get(verifyJWT, getMyVideos);
 
 router
   .route("/:videoId")
-  .get(getVideoById)
+  .get(optionalVerifyJWT, getVideoById)
   .delete(verifyJWT, isEmailVerified, deleteVideo)
   .patch(verifyJWT, isEmailVerified, upload.single("thumbnail"), updateVideo);
 
 router.post("/:videoId/view", optionalVerifyJWT, recordVideoView);
 
-router.route("/c/:username/videos").get(getVideosByUsername);
+router.route("/c/:username/videos").get(optionalVerifyJWT, getVideosByUsername);
 
 router
   .route("/toggle/publish/:videoId")
