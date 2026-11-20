@@ -100,7 +100,13 @@ const loginUser = asyncHandler(async (req, res) => {
   const { username, email, password, rememberMe } = req.body;
 
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [
+      // Only add the username condition if a username was provided
+      ...(username ? [{ username }] : []),
+
+      // Only add the email condition if an email was provided
+      ...(email ? [{ email }] : []),
+    ],
   });
 
   if (!user) {
@@ -113,9 +119,9 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new APIError(404, "Invalid password");
   }
 
-  if (!user.isEmailVerified) {
-    throw new APIError(403, "Please verify your email before logging in");
-  }
+  // if (!user.isEmailVerified) {
+  //   throw new APIError(403, "Please verify your email before logging in");
+  // }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     user._id,
